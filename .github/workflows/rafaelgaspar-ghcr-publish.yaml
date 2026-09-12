@@ -12,19 +12,63 @@ permissions: {}
 
 jobs:
   build:
-    name: Docker Build & Push
+    name: Tag, build, and push
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
 
-      - name: Read package version
-        id: pkg
-        run: echo "version=v$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Configure git
+        run: |
+          git config user.name "Rafael Antunes"
+          git config user.email "me@rafaelgaspar.xyz"
+
+      - name: Fetch upstream tags
+        run: |
+          if git remote get-url upstream >/dev/null 2>&1; then
+            git remote set-url upstream https://github.com/supercorp-ai/supergateway.git
+          else
+            git remote add upstream https://github.com/supercorp-ai/supergateway.git
+          fi
+          git fetch --tags upstream
+
+      - name: Resolve integration tag
+        id: release
+        run: |
+          chmod +x ./.github/scripts/resolve-integration-tag.sh
+          ./.github/scripts/resolve-integration-tag.sh 'v*.*.*' '^v[0-9]+\.[0-9]+\.[0-9]+$'
+
+      - name: Create and push integration tag
+        if: steps.release.outputs.skip_release != 'true'
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          git tag -a "${TAG}" -m "rafaelgaspar integration release ${TAG}"
+          git push origin "${TAG}"
+
+      - name: Create GitHub release
+        if: steps.release.outputs.skip_release != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          body=$(cat <<EOF
+          rafaelgaspar integration release based on upstream ${{ steps.release.outputs.base_tag }}.
+
+          Container image: \`${{ env.IMAGE_NAME }}:${TAG}\`
+          EOF
+          )
+          gh release create "${TAG}" \
+            --repo rafaelgaspar/supergateway \
+            --title "${TAG}" \
+            --notes "${body}" \
+            --target rafaelgaspar
 
       - name: Extract Docker metadata
         id: meta
@@ -32,7 +76,7 @@ jobs:
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=${{ steps.pkg.outputs.version }}
+            type=raw,value=${{ steps.release.outputs.tag }}
             type=raw,value=latest
             type=sha,prefix=,format=short
             type=ref,event=branch

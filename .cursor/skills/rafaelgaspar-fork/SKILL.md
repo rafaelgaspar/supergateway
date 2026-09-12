@@ -12,7 +12,7 @@ disable-model-invocation: true
 
 Upstream: [supercorp-ai/supergateway](https://github.com/supercorp-ai/supergateway). Fork:
 [rafaelgaspar/supergateway](https://github.com/rafaelgaspar/supergateway). Ships
-**`ghcr.io/rafaelgaspar/supergateway`** from integration branch **`rafaelgaspar`**.
+**`ghcr.io/rafaelgaspar/supergateway`** from integration branch **`rafaelgaspar`** (image tag `vX.Y.Z-rafaelgaspar.N`, starting at `.0`).
 
 The fork image is a **generic base** (Node 26 on Debian forkly, built supergateway, upstream-style
 `ENTRYPOINT ["supergateway"]`). Consumers may wrap it with their own ENTRYPOINT (e.g. `tini` and
