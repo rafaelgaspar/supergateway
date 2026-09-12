@@ -1,0 +1,116 @@
+name: rafaelgaspar Tag Bump
+
+on:
+  schedule:
+    # Daily — rebuild when upstream has a newer release tag than the stack base.
+    - cron: '15 4 * * *'
+  workflow_dispatch:
+    inputs:
+      upstream_tag:
+        description: Upstream release tag (e.g. v3.4.3). Leave empty to use latest upstream tag.
+        required: false
+        type: string
+      dry_run:
+        description: Validate stack order only (no rebase or push)
+        required: false
+        type: boolean
+        default: false
+      squash:
+        description: Squash each feat layer to one commit during rebuild
+        required: false
+        type: boolean
+        default: true
+
+concurrency:
+  group: rafaelgaspar-tag-bump
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  bump:
+    name: Rebuild rafaelgaspar
+    if: github.repository == 'rafaelgaspar/supergateway'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout rafaelgaspar
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: rafaelgaspar
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "Rafael Antunes"
+          git config user.email "me@rafaelgaspar.xyz"
+
+      - name: Add upstream remote
+        run: |
+          if git remote get-url upstream >/dev/null 2>&1; then
+            git remote set-url upstream https://github.com/supercorp-ai/supergateway.git
+          else
+            git remote add upstream https://github.com/supercorp-ai/supergateway.git
+          fi
+
+      - name: Resolve upstream tag
+        id: tag
+        env:
+          INPUT_TAG: ${{ inputs.upstream_tag }}
+        run: |
+          set -euo pipefail
+          git fetch upstream --tags --force
+          git fetch origin --force --prune
+          git fetch origin 'refs/heads/feat/*:refs/remotes/origin/feat/*' || true
+
+          if [[ -n "${INPUT_TAG:-}" ]]; then
+            UPSTREAM_TAG="${INPUT_TAG}"
+          else
+            UPSTREAM_TAG=$(
+              git ls-remote --tags upstream 'v*.*.*' \
+                | awk -F/ '{print $3}' \
+                | sed 's/\^{}//' \
+                | sort -V \
+                | tail -1
+            )
+          fi
+
+          [[ -n "${UPSTREAM_TAG:-}" ]] || { echo "No upstream release tag found"; exit 1; }
+          git rev-parse "${UPSTREAM_TAG}^{commit}" >/dev/null
+
+          CURRENT_BASE_TAG=$(
+            git tag -l 'v*.*.*' --merged origin/feat/rafaelgaspar | sort -V | tail -1
+          )
+
+          echo "upstream_tag=${UPSTREAM_TAG}" >> "$GITHUB_OUTPUT"
+          echo "current_base_tag=${CURRENT_BASE_TAG}" >> "$GITHUB_OUTPUT"
+          echo "Resolved upstream tag: ${UPSTREAM_TAG}"
+          echo "Current stack base tag: ${CURRENT_BASE_TAG:-unknown}"
+
+      - name: Decide whether to rebuild
+        id: plan
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          UPSTREAM_TAG: ${{ steps.tag.outputs.upstream_tag }}
+          CURRENT_BASE_TAG: ${{ steps.tag.outputs.current_base_tag }}
+        run: |
+          if [[ "$EVENT_NAME" == "schedule" && "$CURRENT_BASE_TAG" == "$UPSTREAM_TAG" ]]; then
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "Scheduled run: stack already on ${UPSTREAM_TAG}; skipping."
+          else
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Dry run (validate stack)
+        if: steps.plan.outputs.should_run == 'true' && inputs.dry_run == true
+        run: |
+          chmod +x ./.github/scripts/rebuild-rafaelgaspar.sh
+          ./.github/scripts/rebuild-rafaelgaspar.sh --dry-run "${{ steps.tag.outputs.upstream_tag }}"
+
+      - name: Rebuild rafaelgaspar
+        if: steps.plan.outputs.should_run == 'true' && inputs.dry_run != true
+        run: |
+          chmod +x ./.github/scripts/rebuild-rafaelgaspar.sh
+          ./.github/scripts/rebuild-rafaelgaspar.sh --squash --push "${{ steps.tag.outputs.upstream_tag }}"
