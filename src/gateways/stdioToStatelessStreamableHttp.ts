@@ -189,7 +189,9 @@ export async function stdioToStatelessStreamableHttp(
             }
 
             try {
-              transport.send(jsonMsg)
+              void transport
+                .send(jsonMsg)
+                .catch((e) => console.error('Async send failed:', e))
             } catch (e) {
               logger.error(`Failed to send to StreamableHttp`, e)
             }
