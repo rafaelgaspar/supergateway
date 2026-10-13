@@ -158,6 +158,20 @@ Use [ngrok](https://ngrok.com/) to share your local MCP server publicly:
 ```bash
 npx -y supergateway --port 8000 --stdio "npx -y @modelcontextprotocol/server-filesystem ."
 
+## rafaelgaspar fork
+
+This repository is a [MIT](LICENSE) fork of [supercorp-ai/supergateway](https://github.com/supercorp-ai/supergateway).
+Customizations ship as Docker images built from the **`rafaelgaspar`** integration branch:
+
+- **Image:** [`ghcr.io/rafaelgaspar/supergateway`](https://github.com/rafaelgaspar/supergateway/pkgs/container/supergateway)
+- **Workflow:** linear stacked `feat/*` branches (see [`.cursor/skills/rafaelgaspar-fork/SKILL.md`](.cursor/skills/rafaelgaspar-fork/SKILL.md))
+
+For upstream Supergateway docs and community support, see the [upstream README](https://github.com/supercorp-ai/supergateway).
+
+**Supergateway** runs **MCP stdio-based servers** over **SSE (Server-Sent Events)** or **WebSockets (WS)** with one command. This is useful for remote access, debugging, or connecting to clients when your MCP server only supports stdio.
+
+Supported by [Supermachine](https://supermachine.ai) (hosted MCPs), [Superinterface](https://superinterface.ai), and [Supercorp](https://supercorp.ai).
+
 # In another terminal:
 ngrok http 8000
 ```
