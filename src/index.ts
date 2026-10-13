@@ -31,6 +31,7 @@ import { getLogger } from './lib/getLogger.js'
 import { getVersion } from './lib/getVersion.js'
 import { stdioToStatelessStreamableHttp } from './gateways/stdioToStatelessStreamableHttp.js'
 import { stdioToStatefulStreamableHttp } from './gateways/stdioToStatefulStreamableHttp.js'
+import { stdioSharedToStreamableHttp } from './gateways/stdioSharedToStreamableHttp.js'
 
 type InputTransport = 'stdio' | 'sse' | 'streamableHttp'
 
@@ -141,6 +142,12 @@ async function main() {
       description:
         'Session timeout in milliseconds. Only supported for stateful stdio→StreamableHttp. Defaults to 30 minutes of idleness; a client that disconnects without terminating its session used to keep its child process alive forever.',
     })
+    .option('shared', {
+      type: 'boolean',
+      default: false,
+      description:
+        'One shared stdio child per process with accept-any HTTP session routing. Only supported for stdio to StreamableHttp.',
+    })
     .option('protocolVersion', {
       type: 'string',
       description:
@@ -211,34 +218,9 @@ async function main() {
           healthEndpoints: argv.healthEndpoint as string[],
         })
       } else if (argv.outputTransport === 'streamableHttp') {
-        const stateful = argv.stateful
-        if (stateful) {
-          logger.info('Running stateful server')
-
-          let sessionTimeout: null | number
-          if (typeof argv.sessionTimeout === 'number') {
-            // Negated so that NaN (`--sessionTimeout 30m`) fails too: `NaN <= 0`
-            // is false, and it used to switch the default timeout off.
-            if (!(argv.sessionTimeout > 0)) {
-              logger.error(
-                `Error: \`sessionTimeout\` must be a positive number, received: ${argv.sessionTimeout}`,
-              )
-              process.exit(1)
-            }
-
-            sessionTimeout = argv.sessionTimeout
-          } else {
-            // A stateful session owns a child process, and the only thing that
-            // used to release it was the client explicitly deleting the
-            // session. A client that crashes, is force-quit, or simply closes
-            // its transport never sends that, so every such disconnect leaked a
-            // process for the lifetime of the gateway. Thirty minutes is far
-            // longer than any gap between calls in a live session and still
-            // bounds what a vanished client can strand.
-            sessionTimeout = defaultSessionTimeout
-          }
-
-          await stdioToStatefulStreamableHttp({
+        if (argv.shared) {
+          logger.info('Running shared server')
+          await stdioSharedToStreamableHttp({
             stdioCmd: argv.stdio!,
             port: argv.port,
             streamableHttpPath: argv.streamableHttpPath,
@@ -249,24 +231,65 @@ async function main() {
               argv,
               logger,
             }),
-            sessionTimeout,
           })
         } else {
-          logger.info('Running stateless server')
+          const stateful = argv.stateful
+          if (stateful) {
+            logger.info('Running stateful server')
 
-          await stdioToStatelessStreamableHttp({
-            stdioCmd: argv.stdio!,
-            port: argv.port,
-            streamableHttpPath: argv.streamableHttpPath,
-            logger,
-            corsOrigin: corsOrigin({ argv }),
-            healthEndpoints: argv.healthEndpoint as string[],
-            headers: headers({
-              argv,
+            let sessionTimeout: null | number
+            if (typeof argv.sessionTimeout === 'number') {
+              // Negated so that NaN (`--sessionTimeout 30m`) fails too: `NaN <= 0`
+              // is false, and it used to switch the default timeout off.
+              if (!(argv.sessionTimeout > 0)) {
+                logger.error(
+                  `Error: \`sessionTimeout\` must be a positive number, received: ${argv.sessionTimeout}`,
+                )
+                process.exit(1)
+              }
+
+              sessionTimeout = argv.sessionTimeout
+            } else {
+              // A stateful session owns a child process, and the only thing that
+              // used to release it was the client explicitly deleting the
+              // session. A client that crashes, is force-quit, or simply closes
+              // its transport never sends that, so every such disconnect leaked a
+              // process for the lifetime of the gateway. Thirty minutes is far
+              // longer than any gap between calls in a live session and still
+              // bounds what a vanished client can strand.
+              sessionTimeout = defaultSessionTimeout
+            }
+
+            await stdioToStatefulStreamableHttp({
+              stdioCmd: argv.stdio!,
+              port: argv.port,
+              streamableHttpPath: argv.streamableHttpPath,
               logger,
-            }),
-            protocolVersion: argv.protocolVersion,
-          })
+              corsOrigin: corsOrigin({ argv }),
+              healthEndpoints: argv.healthEndpoint as string[],
+              headers: headers({
+                argv,
+                logger,
+              }),
+              sessionTimeout,
+            })
+          } else {
+            logger.info('Running stateless server')
+
+            await stdioToStatelessStreamableHttp({
+              stdioCmd: argv.stdio!,
+              port: argv.port,
+              streamableHttpPath: argv.streamableHttpPath,
+              logger,
+              corsOrigin: corsOrigin({ argv }),
+              healthEndpoints: argv.healthEndpoint as string[],
+              headers: headers({
+                argv,
+                logger,
+              }),
+              protocolVersion: argv.protocolVersion,
+            })
+          }
         }
       } else {
         logger.error(`Error: stdio→${argv.outputTransport} not supported`)
