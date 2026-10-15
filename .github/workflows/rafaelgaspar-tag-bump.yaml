@@ -1,7 +1,6 @@
 # Thin caller to drop into a fork at .github/workflows/rafaelgaspar-tag-bump.yaml
 # Fill in with: from members.yaml (upstream_url, tag_glob, tag_filter, publish_workflow).
-# Calls the pack reusable vendored beside it (GitHub will not uses: a file from
-# fork-pack/dot-github — reusable workflows must live under .github/workflows).
+# Reusable lives in fork-pack .github/workflows (workflow_call only).
 name: rafaelgaspar Tag Bump
 
 on:
@@ -32,7 +31,7 @@ permissions: {}
 
 jobs:
   bump:
-    uses: ./.github/workflows/rafaelgaspar-tag-bump-reusable.yaml
+    uses: rafaelgaspar/fork-pack/.github/workflows/rafaelgaspar-tag-bump.yaml@main
     with:
       upstream_url: https://github.com/supercorp-ai/supergateway.git
       tag_glob: 'v*.*.*'
