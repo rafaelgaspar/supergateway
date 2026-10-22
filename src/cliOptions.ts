@@ -132,6 +132,12 @@ export const cli = (args: string[]) =>
       description:
         'Whether the server is stateful. Only supported for stdio→StreamableHttp.',
     })
+    .option('shared', {
+      type: 'boolean',
+      default: false,
+      description:
+        'One shared stdio child per process with accept-any HTTP session routing. Only supported for stdio to StreamableHttp.',
+    })
     .option('sessionTimeout', {
       type: 'number',
       description:
