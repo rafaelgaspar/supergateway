@@ -3,3 +3,10 @@
 !.release/supergateway.tgz
 !docker
 !docker/*.Dockerfile
+# Fork GHCR image (repo-root Dockerfile) needs the TypeScript sources.
+!package.json
+!package-lock.json
+!tsconfig.json
+!tsconfig.build.json
+!src
+!src/**
