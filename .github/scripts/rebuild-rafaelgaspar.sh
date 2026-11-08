@@ -12,17 +12,21 @@ ROOT_FEAT="${ROOT_FEAT:-feat/rafaelgaspar}"
 UPSTREAM_TAG_PATTERN="${UPSTREAM_TAG_PATTERN:-^v[0-9]+(\\.[0-9]+\\.[0-9]+)?$}"
 
 UPSTREAM_TAG=""
+UPSTREAM_REF=""
 PUSH=false
 DRY_RUN=false
 SQUASH=false
 
 usage() {
   cat <<'EOF'
-Usage: rebuild-rafaelgaspar.sh [options] <upstream-tag>
+Usage: rebuild-rafaelgaspar.sh [options] [<upstream-tag>]
 
-Rebuild the linear feat/* stack on upstream tag T and reset rafaelgaspar to the stack tip.
+Rebuild the linear feat/* stack and reset rafaelgaspar to the stack tip.
+
+Base is either an upstream release tag (default) or --upstream-ref (tracks: main).
 
 Options:
+  --upstream-ref    Rebuild onto a git ref (e.g. upstream/master) instead of a tag
   --push            Push rebased feat/* branches and rafaelgaspar (--force-with-lease)
   --squash          Squash each layer to one commit and fix automation titles
   --dry-run         Discover and validate the stack only; do not rebase or push
@@ -74,7 +78,7 @@ discover_stack() {
   )
 
   [[ ${STACK[0]} == "$ROOT_FEAT" ]] \
-    || die "${ROOT_FEAT} must lead the stack closest to ${UPSTREAM_TAG}; got ${STACK[0]}"
+    || die "${ROOT_FEAT} must lead the stack; got ${STACK[0]}"
 
   # Drop leftover feat/* commits whose tree matches the previous layer.
   local compact=() prev_tree="" tree
@@ -608,6 +612,12 @@ apply_child_layer_patch() {
       log "Dockerfile conflict: kept ${tree_ref} overlay"
     fi
     resolve_owned_lockfile "$old_parent" "$tree_ref"
+    # Overlay restacks can carry a leftover rebuild.log; the new parent
+    # deleted it. Keep the deletion so the log never re-enters the stack.
+    if git diff --name-only --diff-filter=U | grep -qx rebuild.log; then
+      git rm -f -- rebuild.log >/dev/null
+      log "rebuild.log conflict: dropped leftover log from ${tree_ref}"
+    fi
     if git diff --name-only --diff-filter=U | grep -q .; then
       try_mergiraf_solve || true
     fi
@@ -628,6 +638,11 @@ push_ref() {
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --upstream-ref)
+      [[ $# -ge 2 ]] || die "--upstream-ref requires a ref"
+      UPSTREAM_REF=$2
+      shift 2
+      ;;
     --push)
       PUSH=true
       shift
@@ -659,9 +674,12 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-[[ -n $UPSTREAM_TAG ]] || die "upstream tag required"
-[[ $UPSTREAM_TAG =~ $UPSTREAM_TAG_PATTERN ]] \
-  || die "upstream tag ${UPSTREAM_TAG} does not match expected pattern"
+if [[ -n $UPSTREAM_REF && -n $UPSTREAM_TAG ]]; then
+  die "use either --upstream-ref or an upstream tag, not both"
+fi
+if [[ -z $UPSTREAM_REF && -z $UPSTREAM_TAG ]]; then
+  die "upstream tag or --upstream-ref required"
+fi
 
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || die "must run inside a git repository"
 git fetch "$UPSTREAM_REMOTE" --tags --force
@@ -671,29 +689,36 @@ if git remote get-url archive >/dev/null 2>&1; then
   git fetch archive --force --prune || true
 fi
 
-UPSTREAM_SHA=$(git rev-parse "${UPSTREAM_TAG}^{commit}") \
-  || die "upstream tag not found: ${UPSTREAM_TAG} (remote ${UPSTREAM_REMOTE})"
-
-# Compare tag *objects* (annotated tag SHA != peeled commit). Some hosts omit
-# the refs/tags/T^{} line from ls-remote, so do not treat the tag object as a commit.
-local_tag_obj=$(git rev-parse "${UPSTREAM_TAG}")
-remote_tag_obj=$(
-  git ls-remote --tags "$UPSTREAM_REMOTE" "refs/tags/${UPSTREAM_TAG}" \
-    | awk -v tag="refs/tags/${UPSTREAM_TAG}" '$2 == tag { print $1; exit }'
-)
-[[ -n $remote_tag_obj ]] \
-  || die "upstream remote has no tag ${UPSTREAM_TAG} (refusing local/forged tag)"
-[[ $local_tag_obj == "$remote_tag_obj" ]] \
-  || die "local tag ${UPSTREAM_TAG} (${local_tag_obj}) != upstream (${remote_tag_obj}); retag not fetched"
+if [[ -n $UPSTREAM_REF ]]; then
+  git fetch "$UPSTREAM_REMOTE" --force
+  UPSTREAM_SHA=$(git rev-parse "${UPSTREAM_REF}^{commit}") \
+    || die "upstream ref not found: ${UPSTREAM_REF}"
+  UPSTREAM_BASE_LABEL=$UPSTREAM_REF
+else
+  [[ $UPSTREAM_TAG =~ $UPSTREAM_TAG_PATTERN ]] \
+    || die "upstream tag ${UPSTREAM_TAG} does not match expected pattern"
+  UPSTREAM_SHA=$(git rev-parse "${UPSTREAM_TAG}^{commit}") \
+    || die "upstream tag not found: ${UPSTREAM_TAG} (remote ${UPSTREAM_REMOTE})"
+  local_tag_obj=$(git rev-parse "${UPSTREAM_TAG}")
+  remote_tag_obj=$(
+    git ls-remote --tags "$UPSTREAM_REMOTE" "refs/tags/${UPSTREAM_TAG}" \
+      | awk -v tag="refs/tags/${UPSTREAM_TAG}" '$2 == tag { print $1; exit }'
+  )
+  [[ -n $remote_tag_obj ]] \
+    || die "upstream remote has no tag ${UPSTREAM_TAG} (refusing local/forged tag)"
+  [[ $local_tag_obj == "$remote_tag_obj" ]] \
+    || die "local tag ${UPSTREAM_TAG} (${local_tag_obj}) != upstream (${remote_tag_obj}); retag not fetched"
+  UPSTREAM_BASE_LABEL=$UPSTREAM_TAG
+fi
 
 log "integration branch: ${INTEGRATION_BRANCH}"
-log "upstream tag: ${UPSTREAM_TAG} (${UPSTREAM_SHA})"
+log "upstream base: ${UPSTREAM_BASE_LABEL} (${UPSTREAM_SHA})"
 
 discover_stack
 log "stack order (${#STACK[@]} branches):"
 for branch in "${STACK[@]}"; do
   if [[ $branch == "$ROOT_FEAT" ]]; then
-    printf '  - %s (base: %s)\n' "$branch" "$UPSTREAM_TAG"
+    printf '  - %s (base: %s)\n' "$branch" "$UPSTREAM_BASE_LABEL"
   else
     printf '  - %s (base: %s)\n' "$branch" "${STACK_PARENT[$branch]}"
   fi
