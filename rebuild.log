@@ -24,3 +24,41 @@ hint: 	git rm --cached .fork-pack
 hint:
 hint: See "git help submodule" for more information.
 hint: Disable this message with "git config set advice.addEmbeddedRepo false"
+[feat/rafaelgaspar 8ca7ec5] feat(rafaelgaspar): tag integration releases from restacked upstream
+ 17 files changed, 1206 insertions(+), 1601 deletions(-)
+ create mode 120000 .claude/skills
+ create mode 100644 .cursor/skills/README.md
+ create mode 100644 .cursor/skills/rafaelgaspar-fork/SKILL.md
+ create mode 160000 .fork-pack
+ create mode 100755 .github/scripts/rebuild-rafaelgaspar.sh
+ create mode 100755 .github/scripts/resolve-integration-tag.sh
+ delete mode 100644 .github/workflows/binaries.yaml
+ delete mode 100644 .github/workflows/docker-publish.yaml
+ delete mode 100644 .github/workflows/npm-publish.yaml
+ create mode 100644 .github/workflows/rafaelgaspar-ghcr-publish.yaml
+ create mode 100644 .github/workflows/rafaelgaspar-tag-bump.yaml
+ delete mode 100644 .github/workflows/release-soak-lane.yaml
+ delete mode 100644 .github/workflows/release-soak.yaml
+ delete mode 100644 .github/workflows/tests.yaml
+ create mode 100644 rebuild.log
+[feat/rafaelgaspar f7c9e76] feat(rafaelgaspar): tag integration releases from restacked upstream
+ Date: Mon Nov 9 17:24:10 2026 +0000
+ 17 files changed, 1289 insertions(+), 1601 deletions(-)
+ create mode 120000 .claude/skills
+ create mode 100644 .cursor/skills/README.md
+ create mode 100644 .cursor/skills/rafaelgaspar-fork/SKILL.md
+ create mode 160000 .fork-pack
+ create mode 100755 .github/scripts/rebuild-rafaelgaspar.sh
+ create mode 100755 .github/scripts/resolve-integration-tag.sh
+ delete mode 100644 .github/workflows/binaries.yaml
+ delete mode 100644 .github/workflows/docker-publish.yaml
+ delete mode 100644 .github/workflows/npm-publish.yaml
+ create mode 100644 .github/workflows/rafaelgaspar-ghcr-publish.yaml
+ create mode 100644 .github/workflows/rafaelgaspar-tag-bump.yaml
+ delete mode 100644 .github/workflows/release-soak-lane.yaml
+ delete mode 100644 .github/workflows/release-soak.yaml
+ delete mode 100644 .github/workflows/tests.yaml
+ create mode 100644 rebuild.log
+==> rebuild feat/latest-node-and-forky on f7c9e769f7e3c80930c13c7801d92153f72652f2
+Switched to a new branch 'feat/latest-node-and-forky'
+M	rebuild.log
