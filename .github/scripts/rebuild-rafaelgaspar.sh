@@ -23,7 +23,7 @@ Usage: rebuild-rafaelgaspar.sh [options] [<upstream-tag>]
 
 Rebuild the linear feat/* stack and reset rafaelgaspar to the stack tip.
 
-Base is either an upstream release tag (default) or --upstream-ref (tracks: main).
+Base is either an upstream release tag (default) or --upstream-ref (tracks: branch).
 
 Options:
   --upstream-ref    Rebuild onto a git ref (e.g. upstream/master) instead of a tag
@@ -51,10 +51,29 @@ feat_remote() {
   printf '%s/%s\n' "$ORIGIN_REMOTE" "$1"
 }
 
+is_stack_stray() {
+  local branch=$1
+  local stray_file=${STACK_STRAY_FILE:-.github/rafaelgaspar-stack-stray}
+  [[ -f $stray_file ]] || return 1
+  while IFS= read -r line || [[ -n $line ]]; do
+    line=${line%%#*}
+    line=${line// /}
+    [[ -z $line ]] && continue
+    [[ $branch == "$line" ]] && return 0
+  done <"$stray_file"
+  return 1
+}
+
 list_feat_branches() {
-  git for-each-ref "refs/remotes/${ORIGIN_REMOTE}/feat" --format='%(refname:short)' \
-    | sed "s|^${ORIGIN_REMOTE}/||" \
-    | sort -u
+  local branch
+  while IFS= read -r branch; do
+    is_stack_stray "$branch" && { printf '==> stack stray (excluded): %s\n' "$branch" >&2; continue; }
+    printf '%s\n' "$branch"
+  done < <(
+    git for-each-ref "refs/remotes/${ORIGIN_REMOTE}/feat" --format='%(refname:short)' \
+      | sed "s|^${ORIGIN_REMOTE}/||" \
+      | sort -u
+  )
 }
 
 discover_stack() {
