@@ -1,0 +1,26 @@
+==> integration branch: rafaelgaspar
+==> upstream base: v4.2.1 (a78bd90804d3080e8268961949f22575b34826f0)
+==> skip feat/shared-gateway: same tree as previous layer
+==> stack order (3 branches):
+  - feat/rafaelgaspar (base: v4.2.1)
+  - feat/latest-node-and-forky (base: feat/rafaelgaspar)
+  - feat/async-send-rejection (base: feat/latest-node-and-forky)
+==> stack tip: feat/async-send-rejection
+==> mergiraf merge driver enabled (mergiraf 0.20.0)
+==> rebuild feat/rafaelgaspar on a78bd90804d3080e8268961949f22575b34826f0
+Switched to a new branch 'feat/rafaelgaspar'
+warning: adding embedded git repository: .fork-pack
+hint: You've added another git repository inside your current repository.
+hint: Clones of the outer repository will not contain the contents of
+hint: the embedded repository and will not know how to obtain it.
+hint: If you meant to add a submodule, use:
+hint:
+hint: 	git submodule add <url> .fork-pack
+hint:
+hint: If you added this path by mistake, you can remove it from the
+hint: index with:
+hint:
+hint: 	git rm --cached .fork-pack
+hint:
+hint: See "git help submodule" for more information.
+hint: Disable this message with "git config set advice.addEmbeddedRepo false"
