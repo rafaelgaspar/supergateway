@@ -17,26 +17,24 @@ Shared workflow for the public application forks. Clone them under
 skills in `dot-cursor/` vendored onto forks as `.cursor/`). Per-fork remotes
 and tag filters: `members.yaml`.
 
-**Upstream PR test coverage:** [docs/feat-upstream-test-coverage.md](https://github.com/rafaelgaspar/fork-pack/blob/main/docs/feat-upstream-test-coverage.md) in fork-pack.
-
-| Fork | Upstream | Ships from `rafaelgaspar` |
-| --- | --- | --- |
-| [homepage](https://github.com/rafaelgaspar/homepage) | [gethomepage/homepage](https://github.com/gethomepage/homepage) | `ghcr.io/rafaelgaspar/homepage` |
+| Fork                                                         | Upstream                                                                  | Ships from `rafaelgaspar`           |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------- | ----------------------------------- |
+| [homepage](https://github.com/rafaelgaspar/homepage)         | [gethomepage/homepage](https://github.com/gethomepage/homepage)           | `ghcr.io/rafaelgaspar/homepage`     |
 | [supergateway](https://github.com/rafaelgaspar/supergateway) | [supercorp-ai/supergateway](https://github.com/supercorp-ai/supergateway) | `ghcr.io/rafaelgaspar/supergateway` |
-| [xpra](https://github.com/rafaelgaspar/xpra) | [Xpra-org/xpra](https://github.com/Xpra-org/xpra) | GitHub release: full `.deb` set + `deb-manifest.txt` (k3s); overlay `.deb` optional for apt-only consumers |
-| [xpra-html5](https://github.com/rafaelgaspar/xpra-html5) | [Xpra-org/xpra-html5](https://github.com/Xpra-org/xpra-html5) | GitHub release + HTML5 tarball |
-| [otbr-insight](https://github.com/rafaelgaspar/otbr-insight) | [sumitbirla/otbr-insight](https://github.com/sumitbirla/otbr-insight) | `ghcr.io/rafaelgaspar/otbr-insight` |
+| [xpra](https://github.com/rafaelgaspar/xpra)                 | [Xpra-org/xpra](https://github.com/Xpra-org/xpra)                         | GitHub release + overlay `.deb`     |
+| [xpra-html5](https://github.com/rafaelgaspar/xpra-html5)     | [Xpra-org/xpra-html5](https://github.com/Xpra-org/xpra-html5)             | GitHub release + HTML5 tarball      |
+| [otbr-insight](https://github.com/rafaelgaspar/otbr-insight) | [sumitbirla/otbr-insight](https://github.com/sumitbirla/otbr-insight)     | `ghcr.io/rafaelgaspar/otbr-insight` |
 
 This skill is **fork workflow only**. Deploy config (Helm, secrets, image overlays)
 belongs in the private cluster repo, not in these public forks.
 
 ## Repos and branches
 
-| Branch | Role |
-| --- | --- |
-| `main` / `master` | Upstream mirror only — auto-sync, no features |
-| `feat/<name>` | One feature; branch from the **current stack tip** (or `feat/rafaelgaspar` for infra) |
-| `rafaelgaspar` | Points at the stack tip — **only this branch ships** (default branch) |
+| Branch            | Role                                                                                  |
+| ----------------- | ------------------------------------------------------------------------------------- |
+| `main` / `master` | Upstream mirror only — auto-sync, no features                                         |
+| `feat/<name>`     | One feature; branch from the **current stack tip** (or `feat/rafaelgaspar` for infra) |
+| `rafaelgaspar`    | Points at the stack tip — **only this branch ships** (default branch)                 |
 
 **Invariant:** `feat/rafaelgaspar` is always the stack root (infra overlay from
 fork-pack: rebuild script, tag-bump caller, this skill, fork README). Upstream
@@ -100,11 +98,6 @@ fork image or release tag is the artifact.
 
 ## Upstream tag bump
 
-`members.yaml` sets **`tracks: tag`** (default) or **`tracks: branch`**.
-**tag** → latest upstream release tag; **branch** → **`upstream_branch`** (required,
-e.g. `v7.x` for Xpra server, `v21.x` for the matching html5 client). **branch** integration tags use
-`v{tree-version}-{shortsha}-rafaelgaspar.N`.
-
 When upstream publishes a git tag **T** matching `tag_filter` in `members.yaml`
 (a GitHub Release is not required), the fork's thin tag-bump caller runs
 `rafaelgaspar/fork-pack` `rebuild-rafaelgaspar.sh --squash --push`:
@@ -146,11 +139,11 @@ before pushing integration).
 
 ## Scope
 
-| Belongs on the fork (`feat/*`) | Does not belong on these public repos |
-| --- | --- |
-| App source changes | Deploy secrets, private cluster config |
-| Per-fork publish workflow | Private infra paths or repo names |
-| Pointer updates to `rafaelgaspar` | `PLAN-*.md` planning notes |
+| Belongs on the fork (`feat/*`)    | Does not belong on these public repos  |
+| --------------------------------- | -------------------------------------- |
+| App source changes                | Deploy secrets, private cluster config |
+| Per-fork publish workflow         | Private infra paths or repo names      |
+| Pointer updates to `rafaelgaspar` | `PLAN-*.md` planning notes             |
 
 Shared rebuild/tag-bump/skill edits belong in **fork-pack**.
 
