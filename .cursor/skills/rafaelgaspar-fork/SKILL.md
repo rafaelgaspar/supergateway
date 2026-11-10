@@ -102,7 +102,7 @@ fork image or release tag is the artifact.
 
 `members.yaml` sets **`tracks: tag`** (default) or **`tracks: branch`**.
 **tag** → latest upstream release tag; **branch** → **`upstream_branch`** (required,
-e.g. `v7.x` for Xpra server, `v21.x` for the matching html5 client). **branch** integration tags use
+e.g. `v7.x` for Xpra server, `master` for xpra-html5). **branch** integration tags use
 `v{tree-version}-{shortsha}-rafaelgaspar.N`.
 
 When upstream publishes a git tag **T** matching `tag_filter` in `members.yaml`
