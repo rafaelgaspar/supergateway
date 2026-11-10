@@ -62,3 +62,10 @@ hint: Disable this message with "git config set advice.addEmbeddedRepo false"
 ==> rebuild feat/latest-node-and-forky on f7c9e769f7e3c80930c13c7801d92153f72652f2
 Switched to a new branch 'feat/latest-node-and-forky'
 M	rebuild.log
+[feat/latest-node-and-forky f065360] feat(latest-node-and-forky): Node 26 on Debian forkly base image for GHCR
+ 3 files changed, 82 insertions(+)
+ create mode 100644 Dockerfile
+==> rebuild feat/async-send-rejection on f0653605b0d22e89151f9f428b7d8123fe920dad
+Switched to a new branch 'feat/async-send-rejection'
+M	rebuild.log
+grep: write error: Broken pipe
