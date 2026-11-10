@@ -5,7 +5,7 @@ import express from 'express'
 import type { Logger } from '../types.js'
 import { onSignals } from './onSignals.js'
 import { keepConnectionsAlive } from './keepConnectionsAlive.js'
-import { listenOn, type ListenerOptions } from './listenHost.js'
+import { listenOn } from './listenHost.js'
 
 /**
  * One server's part of a listening gateway: its routes, ready to be served on
@@ -64,12 +64,15 @@ export function mountFor<M extends Pick<Mount, 'path'>>(
  * listens for it, exactly as before there could be more than one.
  */
 export function serve({
+  port,
+  host,
   logger,
   mounts,
   healthEndpoints,
   stdio,
-  ...listener
-}: ListenerOptions & {
+}: {
+  port: number
+  host: string | undefined
   logger: Logger
   mounts: Mount[]
   /** The gateway's own health endpoints. */
@@ -80,7 +83,6 @@ export function serve({
    */
   stdio?: { close: () => Promise<void> }
 }): Server {
-  const { port, host } = listener
   onSignals({
     logger,
     cleanup: async () => {
@@ -102,7 +104,7 @@ export function serve({
 
   const sockets = mounts.filter((mount) => mount.upgrade !== undefined)
   if (sockets.length === 0)
-    return keepConnectionsAlive(listenOn(handler, listener, onListening))
+    return keepConnectionsAlive(listenOn(handler, port, host, onListening))
   // @types/express declares RequestHandler as returning `void | Promise<void>`,
   // and Application extends it, so the rule sees a possibly-async handler.
   // Express 4's app is not one: it is `function (req, res, next) {
@@ -121,7 +123,7 @@ export function serve({
       sockets.find((mount) => mount.upgrade!.path === path) ?? sockets[0]
     target.upgrade!.handle(req, socket, head)
   })
-  return listenOn(httpServer, listener, onListening)
+  return listenOn(httpServer, port, host, onListening)
 }
 
 function shared(mounts: Mount[], healthEndpoints: string[]) {

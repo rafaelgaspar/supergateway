@@ -19,7 +19,6 @@
  *   npx -y supergateway --streamableHttp "https://mcp-server.example.com/mcp"
  */
 
-import type { AddressInfo } from 'node:net'
 import { hideBin } from 'yargs/helpers'
 import { parseCli, unknownArguments, inputTransportOf, hostOf } from './cli.js'
 import { getLogger } from './lib/getLogger.js'
@@ -29,7 +28,6 @@ import { orExit } from './exits.js'
 import { exitWithProcessOf, watchProcess } from './lib/exitWithProcess.js'
 import { start } from './startOne.js'
 import { requestShutdown } from './lib/onSignals.js'
-import { unauthenticatedWarning } from './lib/unauthenticatedWarning.js'
 
 async function main() {
   const args = hideBin(process.argv)
@@ -46,9 +44,9 @@ async function main() {
   const argv = 'argv' in run ? run.argv : run.servers[0].argv
   // No log line goes to stdout while it carries an entry's MCP messages.
   const logsBesideStdio = 'servers' in run && run.servers.some(isOnStdio)
-  const loggerFor = (server?: string, logLevel = argv.logLevel) =>
+  const loggerFor = (server?: string) =>
     getLogger({
-      logLevel,
+      logLevel: argv.logLevel,
       logFormat: argv.logFormat,
       outputTransport: logsBesideStdio
         ? 'stdio'
@@ -63,35 +61,13 @@ async function main() {
   const { pid } = orExit(logger, exitWithProcessOf(argv))
   announceStart(logger, run, argv, host, pid)
 
-  // The listening servers without a key. Their warning goes to stderr even
-  // when regular logs are off: it is the one line nobody should miss.
-  const open = servers.filter(
-    (server) => !isOnStdio(server) && server.apiKeys.length === 0,
-  )
-  const warn = loggerFor(undefined, 'info').error
-  const warnUnauthenticated =
-    open.length === 0
-      ? undefined
-      : (bound: AddressInfo) =>
-          warn(
-            unauthenticatedWarning(
-              bound,
-              'servers' in run ? open.map((server) => server.name) : undefined,
-            ),
-          )
   try {
     if ('servers' in run)
-      await serveSeveral(
-        servers,
-        run.healthEndpoints,
-        { port: argv.port, host, warnUnauthenticated },
-        logger,
-      )
+      await serveSeveral(servers, run.healthEndpoints, argv.port, host, logger)
     else
       await start(input, argv, logger, {
         host,
         apiKeys: servers[0].apiKeys,
-        warnUnauthenticated,
       })
   } catch (err) {
     logger.error('Fatal error:', err)

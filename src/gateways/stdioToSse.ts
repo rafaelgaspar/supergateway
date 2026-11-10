@@ -8,11 +8,7 @@ import {
 import { type ServerSource, startServer } from '../lib/serverSource.js'
 import { onSignals } from '../lib/onSignals.js'
 import { keepConnectionsAlive } from '../lib/keepConnectionsAlive.js'
-import {
-  listenOn,
-  endpointHost,
-  type ListenerOptions,
-} from '../lib/listenHost.js'
+import { listenOn, endpointHost } from '../lib/listenHost.js'
 import type { Mount } from '../lib/serve.js'
 import { announceGateway } from '../lib/gatewayListing.js'
 import { OwnedChildProcesses } from '../lib/ownedChildProcesses.js'
@@ -28,7 +24,10 @@ import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js'
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { getVersion } from '../lib/getVersion.js'
 
-interface StdioToSseOptions extends ListenerOptions {
+interface StdioToSseOptions {
+  port: number
+  /** The address to listen on; every interface when unset. */
+  host?: string
   baseUrl: string
   ssePath: string
   messagePath: string
@@ -62,7 +61,7 @@ export async function stdioToSse(args: StdioToSseArgs) {
   const mount = stdioToSseMount(args)
   onSignals({ logger, cleanup: mount.close, drainStdin: true })
   keepConnectionsAlive(
-    listenOn(mount.app, args, () => {
+    listenOn(mount.app, port, host, () => {
       logger.info(`Listening on port ${port}`)
       mount.listening(host, port)
     }),

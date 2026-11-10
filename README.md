@@ -33,7 +33,7 @@ npx -y supergateway --stdio "uvx mcp-server-git"
 - **`--protocolVersion "2025-06-18"`**: Protocol version the gateway uses when it initializes the server itself and the client's request doesn't name one (stateless stdio→Streamable HTTP mode, default: `2024-11-05`)
 - **`--header "x-user-id: 123"`**: Add one or more headers (stdio→SSE, stdio→Streamable HTTP, SSE→stdio, or Streamable HTTP→stdio mode; can be used multiple times). With a local server they go on the gateway's responses; with a remote one (`--sse`, `--streamableHttp`) they are sent to the remote server
 - **`--oauth2Bearer "some-access-token"`**: Adds an `Authorization` header with the provided Bearer token
-- **`--logLevel debug | info | none`**: Controls logging level (default: `info`). Use `debug` for more verbose logs, `none` to suppress all logs except the [warning about a missing API key](#requiring-an-api-key).
+- **`--logLevel debug | info | none`**: Controls logging level (default: `info`). Use `debug` for more verbose logs, `none` to suppress all logs.
 - **`--logFormat text | json`**: Log line format (default: `text`). `json` writes one JSON object per line with `time`, `level`, `msg` and, when a log call carries values, `data`, for ELK and similar log pipelines. Logs go to the same streams as `text`, so stdio output still carries only MCP messages.
 - **`--cors`**: Enable CORS (stdio→SSE or stdio→WS mode). Use `--cors` with no values to allow all origins, or supply one or more allowed origins (e.g. `--cors "http://example.com"` or `--cors "/example\\.com$/"` for regex matching).
 - **`--healthEndpoint /healthz`**: Register one or more endpoints (every mode but stdio output; can be used multiple times) that respond with `"ok"`
@@ -173,7 +173,6 @@ curl -H "Authorization: Bearer $MCP_API_KEY" ...   # or: -H "X-API-Key: $MCP_API
 - A request without a valid key gets `401 Unauthorized`. The `--healthEndpoint` paths and, with `--cors`, browser preflight requests stay open.
 - Keys from `--apiKey`, `--apiKeyFile`, `SUPERGATEWAY_API_KEY` and `SUPERGATEWAY_API_KEY_FILE` are all accepted together, so a key can be rotated by adding the new one before removing the old.
 - An empty key, an unreadable key file or one with no keys stops the gateway at startup rather than running it without authentication.
-- Without a key, a gateway that other machines can reach (no `--host`, `0.0.0.0`, `::` or a network address) prints a `WARNING: No API key is set` line on stderr after its startup listing, even with `--logLevel none`. It changes nothing else. With several servers in a `--config` file, it names the ones without a key. `--host 127.0.0.1`, `localhost` or `::1` keeps it local and quiet.
 - Keys are never logged. Use HTTPS (e.g. behind a reverse proxy) so they are not sent in clear text.
 - To send a key to a remote server from SSE→stdio or Streamable HTTP→stdio, use `--header` or `--oauth2Bearer`; `--apiKey` is refused there.
 
@@ -323,6 +322,20 @@ Use [ngrok](https://ngrok.com/) to share your local MCP server publicly:
 
 ```bash
 npx -y supergateway --port 8000 --stdio "npx -y @modelcontextprotocol/server-filesystem ."
+
+## rafaelgaspar fork
+
+This repository is a [MIT](LICENSE) fork of [supercorp-ai/supergateway](https://github.com/supercorp-ai/supergateway).
+Customizations ship as Docker images built from the **`rafaelgaspar`** integration branch:
+
+- **Image:** [`ghcr.io/rafaelgaspar/supergateway`](https://github.com/rafaelgaspar/supergateway/pkgs/container/supergateway)
+- **Workflow:** linear stacked `feat/*` branches (see [`.cursor/skills/rafaelgaspar-fork/SKILL.md`](.cursor/skills/rafaelgaspar-fork/SKILL.md))
+
+For upstream Supergateway docs and community support, see the [upstream README](https://github.com/supercorp-ai/supergateway).
+
+**Supergateway** runs **MCP stdio-based servers** over **SSE (Server-Sent Events)** or **WebSockets (WS)** with one command. This is useful for remote access, debugging, or connecting to clients when your MCP server only supports stdio.
+
+Supported by [Supermachine](https://supermachine.ai) (hosted MCPs), [Superinterface](https://superinterface.ai), and [Supercorp](https://supercorp.ai).
 
 # In another terminal:
 ngrok http 8000
@@ -482,16 +495,6 @@ In stdio→SSE mode only the path of `--baseUrl` reaches clients: `--baseUrl htt
 
 ## Contributors
 
-- [@shivasymbl](https://github.com/shivasymbl)
-- [@cesar-blog](https://github.com/cesar-blog)
-- [@twinity1](https://github.com/twinity1)
-- [@wandergis](https://github.com/wandergis)
-- [@remidebette](https://github.com/remidebette)
-- [@raja-anbazhagan](https://github.com/raja-anbazhagan)
-- [@plutonji](https://github.com/plutonji)
-- [@madrover](https://github.com/madrover)
-- [@1235467](https://github.com/1235467)
-- [@medram](https://github.com/medram)
 - [@wunsir](https://github.com/wunsir)
 - [@joshmouch](https://github.com/joshmouch)
 - [@akularefiner](https://github.com/akularefiner)
@@ -630,7 +633,7 @@ In stdio→SSE mode only the path of `--baseUrl` reaches clients: `--baseUrl htt
 
 ## Contributing
 
-Issues and PRs welcome: see [CONTRIBUTING.md](CONTRIBUTING.md). For help, ask on [Discord](https://discord.gg/CudcAH53yF) ([SUPPORT.md](SUPPORT.md)); report security issues privately ([SECURITY.md](SECURITY.md)). Accessibility: [ACCESSIBILITY.md](ACCESSIBILITY.md).
+Issues and PRs welcome. Please open one if you encounter problems or have feature suggestions. For questions and discussion, join us on [Discord](https://discord.gg/CudcAH53yF).
 
 ## Tests
 

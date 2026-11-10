@@ -1,7 +1,5 @@
 import type { Server } from 'node:http'
-import type { AddressInfo } from 'node:net'
 import type { Logger } from '../types.js'
-import { isLoopback } from './unauthenticatedWarning.js'
 
 /**
  * The address `--host` names, as `listen` takes it. URLs write an IPv6
@@ -35,38 +33,16 @@ interface Listenable {
   listen(port: number, host: string, onListening: () => void): Server
 }
 
-export interface ListenerOptions {
-  port: number
-  /** The address to listen on; every interface when unset. */
-  host?: string
-  /**
-   * Given when at least one MCP server on the listener has no API key; told
-   * where the listener bound, once, when other machines can reach it.
-   */
-  warnUnauthenticated?: (bound: AddressInfo) => void
-}
-
 /**
  * Listen on `port`, and on `host` when one is set. Without one the call is
  * `listen(port, …)`, exactly as before `--host` existed: every interface.
- * The warning for a listener without an API key follows the startup listing,
- * so it is the last line an operator sees.
  */
 export const listenOn = (
   target: Listenable,
-  { port, host, warnUnauthenticated }: ListenerOptions,
+  port: number,
+  host: string | undefined,
   onListening: () => void,
-) => {
-  const ready = () => {
-    onListening()
-    if (warnUnauthenticated === undefined) return
-    // `listen(port, …)` binds an IP socket, so address() is an AddressInfo.
-    const bound = server.address() as AddressInfo
-    if (!isLoopback(bound.address)) warnUnauthenticated(bound)
-  }
-  const server =
-    host === undefined
-      ? target.listen(port, ready)
-      : target.listen(port, host, ready)
-  return server
-}
+) =>
+  host === undefined
+    ? target.listen(port, onListening)
+    : target.listen(port, host, onListening)

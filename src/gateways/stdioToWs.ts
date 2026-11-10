@@ -9,11 +9,7 @@ import { type ServerSource, startServer } from '../lib/serverSource.js'
 import { keepConnectionsAlive } from '../lib/keepConnectionsAlive.js'
 import { createServer } from 'http'
 import { onSignals } from '../lib/onSignals.js'
-import {
-  listenOn,
-  endpointHost,
-  type ListenerOptions,
-} from '../lib/listenHost.js'
+import { listenOn, endpointHost } from '../lib/listenHost.js'
 import type { Mount } from '../lib/serve.js'
 import { announceGateway } from '../lib/gatewayListing.js'
 import { OwnedChildProcesses } from '../lib/ownedChildProcesses.js'
@@ -24,7 +20,10 @@ import { spawn } from 'child_process'
 import { requireApiKey, verifyApiKey } from '../lib/apiKey.js'
 import { WebSocketServerTransport } from '../server/websocket.js'
 
-interface StdioToWsOptions extends ListenerOptions {
+interface StdioToWsOptions {
+  port: number
+  /** The address to listen on; every interface when unset. */
+  host?: string
   messagePath: string
   logger: Logger
   corsOrigin: CorsOptions['origin']
@@ -63,7 +62,7 @@ export async function stdioToWs(args: StdioToWsArgs) {
   const httpServer = keepConnectionsAlive(createServer(mount.app))
   httpServer.on('upgrade', mount.upgrade.handle)
   onSignals({ logger, cleanup: mount.close, drainStdin: true })
-  listenOn(httpServer, args, () => {
+  listenOn(httpServer, port, host, () => {
     logger.info(`Listening on port ${port}`)
     mount.listening(host, port)
   })

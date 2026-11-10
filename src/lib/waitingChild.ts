@@ -16,6 +16,7 @@ export class WaitingChild implements ChildOwner {
   private readonly unread = new Promise<void>(
     (resolve) => (this.resume = resolve),
   )
+  private readonly timer: NodeJS.Timeout
 
   constructor(
     readonly link: ChildLink,
@@ -25,9 +26,10 @@ export class WaitingChild implements ChildOwner {
     // Takes it off the handoff's list of waiting children.
     private readonly leave: () => void,
   ) {
-    // Not cleared when a client takes the child over: by then end() does
-    // nothing (the child is settled), and the timer is unref'd.
-    setTimeout(() => this.end('no client took it over'), windowMs).unref()
+    this.timer = setTimeout(
+      () => this.end('no client took it over'),
+      windowMs,
+    ).unref()
   }
 
   message(message: any, line: string) {
@@ -58,6 +60,7 @@ export class WaitingChild implements ChildOwner {
   settle(): boolean {
     if (this.settled) return false
     this.settled = true
+    clearTimeout(this.timer)
     this.leave()
     return true
   }

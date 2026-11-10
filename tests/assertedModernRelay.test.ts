@@ -31,8 +31,6 @@ const start = async (t: TestContext, command: string, extra: string[]) => {
       'streamableHttp',
       '--port',
       String(port),
-      '--host',
-      '127.0.0.1',
       ...extra,
     ],
     { MODERN_WIRE: '1' },

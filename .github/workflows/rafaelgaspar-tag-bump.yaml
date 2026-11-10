@@ -1,0 +1,61 @@
+# Thin caller to drop into a fork at .github/workflows/rafaelgaspar-tag-bump.yaml
+# Fill in with: from members.yaml (upstream_url, tag_glob, tag_filter, publish_workflow).
+# Reusable lives in fork-pack .github/workflows (workflow_call only).
+name: rafaelgaspar Tag Bump
+
+on:
+  schedule:
+    - cron: '15 4 * * *'
+  workflow_dispatch:
+    inputs:
+      upstream_tag:
+        description: Upstream release tag. Leave empty to use latest matching git tag.
+        required: false
+        type: string
+      dry_run:
+        description: Validate stack order only (no rebase or push)
+        required: false
+        type: boolean
+        default: false
+      squash:
+        description: Squash each feat layer to one commit during rebuild
+        required: false
+        type: boolean
+        default: true
+
+concurrency:
+  group: rafaelgaspar-tag-bump
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  bump:
+    uses: rafaelgaspar/fork-pack/.github/workflows/rafaelgaspar-tag-bump.yaml@main
+    with:
+      upstream_url: https://github.com/supercorp-ai/supergateway.git
+      tag_glob: 'v*.*.*'
+      tag_filter: '^v[0-9]+\.[0-9]+\.[0-9]+$'
+      # schedule has no workflow_dispatch inputs; passing inputs.* (null) into
+      # boolean reusable inputs fails the called job before it starts.
+      upstream_tag: ${{ github.event.inputs.upstream_tag || '' }}
+      dry_run: ${{ github.event.inputs.dry_run == 'true' }}
+      squash: ${{ github.event.inputs.squash != 'false' }}
+      event_name: ${{ github.event_name }}
+    secrets: inherit
+    permissions:
+      contents: write
+      packages: write
+
+  publish:
+    name: Publish integration release
+    needs: bump
+    if: needs.bump.outputs.should_release == 'true'
+    uses: ./.github/workflows/rafaelgaspar-ghcr-publish.yaml
+    with:
+      ref: rafaelgaspar
+      upstream_tag: ${{ needs.bump.outputs.upstream_tag }}
+    secrets: inherit
+    permissions:
+      contents: write
+      packages: write

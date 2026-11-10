@@ -85,17 +85,14 @@ for (const outputTransport of ['stdio', 'sse']) {
         stderr: unknown[][] = []
       t.mock.method(console, 'log', (...args: unknown[]) => stdout.push(args))
       t.mock.method(console, 'error', (...args: unknown[]) => stderr.push(args))
-      const colors = Object.getOwnPropertyDescriptor(
-        process.stderr,
-        'hasColors',
-      )
-      Object.defineProperty(process.stderr, 'hasColors', {
-        value: undefined,
+      const tty = Object.getOwnPropertyDescriptor(process.stderr, 'isTTY')
+      Object.defineProperty(process.stderr, 'isTTY', {
+        value: false,
         configurable: true,
       })
       t.after(() => {
-        if (colors) Object.defineProperty(process.stderr, 'hasColors', colors)
-        else Reflect.deleteProperty(process.stderr, 'hasColors')
+        if (tty) Object.defineProperty(process.stderr, 'isTTY', tty)
+        else Reflect.deleteProperty(process.stderr, 'isTTY')
       })
       const logger = getLogger({ logLevel, outputTransport })
       const value = { nested: { answer: 42 } }
@@ -126,19 +123,17 @@ for (const outputTransport of ['stdio', 'sse']) {
   }
 }
 
-test('debug logging colours inspected objects only where the terminal allows colour', (t) => {
+test('debug logging colorizes inspected objects only when stderr is a TTY', (t) => {
   const stderr: unknown[][] = []
   t.mock.method(console, 'error', (...args: unknown[]) => stderr.push(args))
-  const colors = Object.getOwnPropertyDescriptor(process.stderr, 'hasColors')
+  const tty = Object.getOwnPropertyDescriptor(process.stderr, 'isTTY')
   t.after(() => {
-    if (colors) Object.defineProperty(process.stderr, 'hasColors', colors)
-    else Reflect.deleteProperty(process.stderr, 'hasColors')
+    if (tty) Object.defineProperty(process.stderr, 'isTTY', tty)
+    else Reflect.deleteProperty(process.stderr, 'isTTY')
   })
-  // A terminal's stderr has hasColors(): false under NO_COLOR, true unless
-  // something turns colour off. A pipe or file has no hasColors at all.
-  const render = (hasColors: (() => boolean) | undefined) => {
-    Object.defineProperty(process.stderr, 'hasColors', {
-      value: hasColors,
+  const render = (isTTY: boolean) => {
+    Object.defineProperty(process.stderr, 'isTTY', {
+      value: isTTY,
       configurable: true,
     })
     stderr.length = 0
@@ -147,23 +142,16 @@ test('debug logging colours inspected objects only where the terminal allows col
     })
     return stderr.at(-1)?.at(-1) as string
   }
-  const plain = '{\n  nested: {\n    answer: 42\n  }\n}'
   // map: debug-tty-colorization
   assert.equal(
-    render(() => true),
+    render(true),
     '{\n  nested: {\n    answer: \u001b[33m42\u001b[39m\n  }\n}',
-    'a terminal that allows colour gets ANSI-coloured inspection output',
-  )
-  // map: debug-no-color
-  assert.equal(
-    render(() => false),
-    plain,
-    'NO_COLOR (or a terminal without colour) gets no escape sequences',
+    'a TTY stderr receives ANSI-colored inspection output',
   )
   // map: debug-plain-without-tty
   assert.equal(
-    render(undefined),
-    plain,
-    'a pipe or file gets the same structure with no escape sequences',
+    render(false),
+    '{\n  nested: {\n    answer: 42\n  }\n}',
+    'a non-TTY stderr receives the same structure with no escape sequences',
   )
 })
