@@ -12,6 +12,8 @@ import { stdioToSse } from './gateways/stdioToSse.js'
 import { stdioToWs } from './gateways/stdioToWs.js'
 import { stdioToStatefulStreamableHttp } from './gateways/stdioToStatefulStreamableHttp.js'
 import { stdioToStatelessStreamableHttp } from './gateways/stdioToStatelessStreamableHttp.js'
+import { stdioSharedToStreamableHttp } from './gateways/stdioSharedToStreamableHttp.js'
+import { corsOrigin } from './lib/corsOrigin.js'
 import { exitWithError } from './exits.js'
 import type { BridgeLifecycle } from './lib/stdioBridge.js'
 import { sseToStdio } from './gateways/sseToStdio.js'
@@ -30,7 +32,18 @@ const listen = async (argv: Cli, logger: Logger, listening: Listening) => {
     await stdioToSse({ ...sseArgs(argv, logger, listening), port })
   else if (argv.outputTransport === 'ws')
     await stdioToWs({ ...wsArgs(argv, logger, listening), port })
-  else {
+  else if (argv.shared) {
+    logger.info('Running shared server')
+    await stdioSharedToStreamableHttp({
+      stdioCmd: argv.stdio!,
+      port,
+      streamableHttpPath: argv.streamableHttpPath,
+      logger,
+      corsOrigin: corsOrigin({ argv }),
+      healthEndpoints: argv.healthEndpoint as string[],
+      headers: headers({ argv, logger }),
+    })
+  } else {
     const { stateful, args } = streamableHttpArgs(argv, logger, listening)
     if (stateful) await stdioToStatefulStreamableHttp({ ...args, port })
     else await stdioToStatelessStreamableHttp({ ...args, port })
