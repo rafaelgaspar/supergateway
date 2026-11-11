@@ -4,3 +4,12 @@ dist
 .release/
 .binary/
 .baselines/
+
+# agent skills (real files under .cursor/skills; .claude/skills is a symlink)
+.claude/*
+!.claude/skills
+.cursor/*
+!.cursor/skills
+
+# local planning notes — not part of the public fork
+/PLAN-*.md
